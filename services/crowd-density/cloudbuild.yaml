@@ -1,0 +1,44 @@
+steps:
+  # Build the Docker image using services/ as build context
+  # so shared/ is available during compilation
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build'
+    args:
+      - 'build'
+      - '--file=crowd-density/Dockerfile'
+      - '--tag=gcr.io/$PROJECT_ID/crowd-density:$SHORT_SHA'
+      - '--tag=gcr.io/$PROJECT_ID/crowd-density:latest'
+      - '.'   # build context = services/
+
+  # Push both tags
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push'
+    args: ['push', '--all-tags', 'gcr.io/$PROJECT_ID/crowd-density']
+    waitFor: ['build']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'crowd-density'
+      - '--image=gcr.io/$PROJECT_ID/crowd-density:$SHORT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--update-env-vars=PROJECT_ID=$PROJECT_ID,NODE_ENV=production'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--max-instances=3'
+      - '--port=8080'
+    waitFor: ['push']
+
+images:
+  - 'gcr.io/$PROJECT_ID/crowd-density:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/crowd-density:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  substitutionOption: ALLOW_LOOSE

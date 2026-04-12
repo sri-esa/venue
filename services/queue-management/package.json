@@ -10,7 +10,7 @@
     "test": "jest --coverage"
   },
   "dependencies": {
-    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/rate-limit": "^9.1.0",
     "@google-cloud/firestore": "^8.3.0",
     "@google-cloud/pubsub": "^4.3.3",
     "dotenv": "^16.4.5",

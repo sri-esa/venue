@@ -1,0 +1,15 @@
+# Exclude node_modules — rebuilt inside the Docker build stage
+**/node_modules/
+# Exclude compiled output — rebuilt from source
+**/dist/
+# Exclude test files
+**/__tests__/
+**/*.test.ts
+**/*.spec.ts
+# Exclude local env files
+**/.env
+**/.env.*
+# IDE
+**/.vscode/
+**/.idea/
+**/.DS_Store

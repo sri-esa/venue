@@ -3,7 +3,11 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+
+# Delete the Windows-generated lock file so npm resolves platform-native
+# binaries (e.g. @rollup/rollup-linux-x64-musl) correctly on Alpine Linux.
+# See: https://github.com/npm/cli/issues/4828
+RUN rm -f package-lock.json && npm install
 
 COPY . .
 

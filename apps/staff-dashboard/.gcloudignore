@@ -1,0 +1,16 @@
+# Keep node_modules out of the Cloud Build upload — rebuilt inside Docker
+node_modules/
+# dist is rebuilt inside Docker
+dist/
+# git history not needed
+.git/
+# Test and coverage artifacts
+coverage/
+# IDE files
+.vscode/
+.idea/
+.DS_Store
+# Local env files — API keys injected via --build-arg substitutions in cloudbuild.yaml
+.env
+.env.*
+*.log

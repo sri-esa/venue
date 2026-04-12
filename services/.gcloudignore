@@ -1,0 +1,33 @@
+# Exclude large directories to keep Cloud Build upload small (target: < 5 MB)
+# Build context is the services/ directory
+
+# Node dependencies — rebuilt inside Docker
+**/node_modules/
+
+# TypeScript build output — rebuilt inside Docker
+**/dist/
+
+# Test files — not needed in container
+**/__tests__/
+**/*.test.ts
+**/*.spec.ts
+**/*.test.js
+**/*.spec.js
+
+# Coverage reports
+**/coverage/
+
+# Local environment files
+**/.env
+**/.env.local
+**/.env.*
+
+# IDE and OS files
+**/.DS_Store
+**/Thumbs.db
+**/.vscode/
+**/.idea/
+
+# Git
+**/.git/
+**/.gitignore
