@@ -19,6 +19,10 @@ if (-not $env:MAPS_API_KEY) {
   throw "Missing required environment variable: MAPS_API_KEY"
 }
 
+if (-not $env:GEMINI_API_KEY) {
+  throw "Missing required environment variable: GEMINI_API_KEY"
+}
+
 $ImageUri = if ($Repository -eq "gcr.io") {
   "gcr.io/$ProjectId/$Service`:latest"
 } else {
@@ -35,7 +39,7 @@ gcloud config set project $ProjectId
 
 gcloud builds submit `
   --config cloudbuild.yaml `
-  --substitutions "_SERVICE=$Service,_REGION=$Region,_IMAGE_URI=$ImageUri,_VITE_GCP_API_KEY=$($env:GCP_API_KEY),_VITE_FCM_VAPID_KEY=$($env:FCM_VAPID_KEY),_VITE_MAPS_API_KEY=$($env:MAPS_API_KEY)"
+  --substitutions "_SERVICE=$Service,_REGION=$Region,_IMAGE_URI=$ImageUri,_VITE_GCP_API_KEY=$($env:GCP_API_KEY),_VITE_FCM_VAPID_KEY=$($env:FCM_VAPID_KEY),_VITE_MAPS_API_KEY=$($env:MAPS_API_KEY),_VITE_GEMINI_API_KEY=$($env:GEMINI_API_KEY)"
 
 Write-Host ""
 Write-Host "Cloud Run URL:"

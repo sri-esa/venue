@@ -1,9 +1,10 @@
-import { Bell, ChevronDown, Menu } from 'lucide-react';
+import { Bell, ChevronDown, LogOut, Menu } from 'lucide-react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { MOCK_VENUE_ID, VENUE_NAME } from '../../config/mock-data';
 import { useSystemHealth } from '../../hooks/useSystemHealth';
 import { useUnreadCount } from '../../store/alert.store';
 import { useUIStore } from '../../store/ui.store';
+import { useAuthStore } from '../../store/auth.store';
 import LiveIndicator from '../common/LiveIndicator';
 import Sidebar from './Sidebar';
 
@@ -21,9 +22,11 @@ export default function AppShell() {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const unreadCount = useUnreadCount();
   const { healthState } = useSystemHealth(MOCK_VENUE_ID);
+  const { user, signOut } = useAuthStore();
 
   const pageTitle = pageTitles[location.pathname] ?? 'Crowgy';
   const systemHealthLabel = healthState === 'CRITICAL' ? 'Critical' : healthState === 'DEGRADED' ? 'Degraded' : 'Healthy';
+  const initials = user?.email?.slice(0, 2).toUpperCase() ?? 'ST';
 
   return (
     <div className="min-h-screen bg-navy-deep text-slate-50">
@@ -79,20 +82,30 @@ export default function AppShell() {
               ) : null}
             </button>
 
-            {/* ACCESSIBILITY: Names the user menu trigger with role and location context. */}
+            {/* User profile + sign out */}
             <button
               type="button"
               className="inline-flex items-center gap-3 rounded-2xl border border-navy-border bg-navy-elevated px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Open profile menu for Shift Lead, North Ops"
+              aria-label="Signed in user"
             >
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-venue-blue/20 text-sm font-bold text-blue-200">
-                ST
+                {initials}
               </span>
               <span className="hidden md:block">
-                <span className="block text-sm font-medium text-slate-100">Shift Lead</span>
-                <span className="block text-sm text-slate-400">North Ops</span>
+                <span className="block text-sm font-medium text-slate-100">{user?.email ?? 'Staff'}</span>
+                <span className="block text-xs text-slate-400">Signed in</span>
               </span>
               <ChevronDown className="hidden h-4 w-4 text-slate-400 md:block" />
+            </button>
+
+            {/* Sign out */}
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-navy-border bg-navy-elevated text-slate-400 transition hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
         </header>

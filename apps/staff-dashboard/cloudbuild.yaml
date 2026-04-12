@@ -10,6 +10,8 @@ steps:
       - VITE_FCM_VAPID_KEY=${_VITE_FCM_VAPID_KEY}
       - --build-arg
       - VITE_MAPS_API_KEY=${_VITE_MAPS_API_KEY}
+      - --build-arg
+      - VITE_GEMINI_API_KEY=${_VITE_GEMINI_API_KEY}
       - .
 
   - name: gcr.io/cloud-builders/docker
