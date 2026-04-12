@@ -3,8 +3,9 @@ import type { QueueStatus } from '../../types/queue.types';
 import type { SystemAlert } from '../../types/alert.types';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY ?? '';
-const GEMINI_MODEL = 'gemini-1.5-flash-latest';
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+// gemini-2.0-flash-lite: lowest quota usage, available on this project's key
+const GEMINI_MODEL = 'gemini-2.0-flash-lite';
+const API_URL = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface ChatMessage {
   role: 'user' | 'model';
@@ -94,8 +95,12 @@ export async function sendGeminiMessage(
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
+    const status = response.status;
+    if (status === 429) {
+      return '⚠️ Gemini quota exceeded for today. The free tier limit has been reached — responses will resume tomorrow or after upgrading the API plan.';
+    }
     console.error('Gemini API error', err);
-    return `⚠️ Gemini API error: ${response.status}. Check the console for details.`;
+    return `⚠️ Gemini API error (${status}). Check the console for details.`;
   }
 
   const data = await response.json();
