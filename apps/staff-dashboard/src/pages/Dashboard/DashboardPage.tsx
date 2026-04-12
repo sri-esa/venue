@@ -1,6 +1,6 @@
 import { Bell, CheckCheck, CheckCircle2, Clock3, ShieldAlert, Users } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import LiveIndicator from '../../components/common/LiveIndicator';
@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const [useFallback, setUseFallback] = useState(false);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState(mockAnalytics);
+  const zoneButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
     const analyticsUnsubscribe = subscribeToRealtimeAnalytics(MOCK_VENUE_ID, (payload) => {
@@ -61,7 +62,9 @@ export default function DashboardPage() {
   const zones = storeZones.length ? (storeZones as VenueZone[]) : useFallback ? mockZones : [];
   const queues = storeQueues.length ? (storeQueues as VenueQueue[]) : useFallback ? mockQueues : [];
   const alerts = storeAlerts.length
-    ? storeAlerts.filter((alert) => !alert.resolvedAt).map((alert) => ({ ...alert, severityCode: severityCodeFromAlert(alert) })) as VenueAlert[]
+    ? (storeAlerts
+        .filter((alert) => !alert.resolvedAt)
+        .map((alert) => ({ ...alert, severityCode: severityCodeFromAlert(alert) })) as VenueAlert[])
     : useFallback
       ? mockAlerts
       : [];
@@ -77,7 +80,10 @@ export default function DashboardPage() {
         criticalZonesCount: zones.filter((zone) => zone.densityLevel === 'CRITICAL').length,
         avgQueueWaitMinutes:
           queues.filter((queue) => queue.isOpen).length > 0
-            ? Math.round(queues.filter((queue) => queue.isOpen).reduce((sum, queue) => sum + queue.estimatedWaitMinutes, 0) / queues.filter((queue) => queue.isOpen).length)
+            ? Math.round(
+                queues.filter((queue) => queue.isOpen).reduce((sum, queue) => sum + queue.estimatedWaitMinutes, 0) /
+                  queues.filter((queue) => queue.isOpen).length,
+              )
             : analytics.avgQueueWaitMinutes,
         longestQueueMinutes: Math.max(...queues.map((queue) => queue.estimatedWaitMinutes), analytics.longestQueueMinutes),
         activeAlertsCount: alerts.length,
@@ -92,10 +98,36 @@ export default function DashboardPage() {
   const attendancePercent = currentAnalytics.percentCapacity * 100;
   const recentAlerts = alerts.slice(0, 5);
   const topQueues = [...queues].sort((left, right) => right.estimatedWaitMinutes - left.estimatedWaitMinutes).slice(0, 8);
+  const visibleZones = zones.slice(0, 12);
+
+  const getGridColumns = () => {
+    if (window.innerWidth >= 1280) return 3;
+    if (window.innerWidth >= 768) return 2;
+    return 1;
+  };
+
+  const handleZoneGridKeyDown = (index: number, event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const columns = getGridColumns();
+    const lastIndex = Math.min(visibleZones.length - 1, zoneButtonRefs.current.length - 1);
+    let nextIndex = index;
+
+    if (event.key === 'ArrowRight') nextIndex = Math.min(index + 1, lastIndex);
+    if (event.key === 'ArrowLeft') nextIndex = Math.max(index - 1, 0);
+    if (event.key === 'ArrowDown') nextIndex = Math.min(index + columns, lastIndex);
+    if (event.key === 'ArrowUp') nextIndex = Math.max(index - columns, 0);
+
+    if (nextIndex !== index) {
+      event.preventDefault();
+      zoneButtonRefs.current[nextIndex]?.focus();
+    }
+  };
 
   return (
     <div className="flex min-h-[calc(100vh-104px)] flex-col gap-4">
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+      <section aria-labelledby="dashboard-metrics-heading" className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+        <h2 id="dashboard-metrics-heading" className="sr-only">
+          Dashboard metrics
+        </h2>
         {loading ? (
           Array.from({ length: 4 }, (_, index) => <LoadingBlock key={index} className="h-48" />)
         ) : (
@@ -134,12 +166,17 @@ export default function DashboardPage() {
         )}
       </section>
 
-      <section className="grid flex-1 grid-cols-1 gap-4 xl:grid-cols-5">
-        <div className="rounded-2xl border border-navy-border bg-navy-card p-5 shadow-panel xl:col-span-3">
+      <section aria-labelledby="dashboard-live-ops-heading" className="grid flex-1 grid-cols-1 gap-4 xl:grid-cols-5">
+        <h2 id="dashboard-live-ops-heading" className="sr-only">
+          Live operations overview
+        </h2>
+        <section aria-labelledby="zone-density-heading" className="rounded-2xl border border-navy-border bg-navy-card p-5 shadow-panel xl:col-span-3">
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-400">Live Zone Density</p>
-              <p className="mt-1 text-lg font-semibold text-slate-50">Twelve-zone live preview</p>
+              <h2 id="zone-density-heading" className="mt-1 text-lg font-semibold text-slate-50">
+                Twelve-zone live preview
+              </h2>
             </div>
             <LiveIndicator />
           </div>
@@ -151,47 +188,65 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => navigate('/heatmap')}
-              className="grid w-full grid-cols-1 gap-3 text-left md:grid-cols-2 xl:grid-cols-3"
-            >
-              {zones.slice(0, 12).map((zone) => (
-                <div
-                  key={zone.zoneId}
-                  className={`rounded-2xl border p-4 transition-all duration-150 ease-ops hover:-translate-y-0.5 hover:border-slate-500 ${
-                    zone.densityLevel === 'CRITICAL'
-                      ? 'animate-pulse border-red-500/30 bg-red-500/12 shadow-critical'
-                      : zone.densityLevel === 'HIGH'
-                        ? 'border-orange-500/20 bg-orange-500/10'
-                        : zone.densityLevel === 'MEDIUM'
-                          ? 'border-amber-500/20 bg-amber-500/10'
-                          : 'border-green-500/20 bg-green-500/10'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-50">{zone.name}</p>
-                      <p className="mt-1 text-sm text-slate-400">{zone.rawCount.toLocaleString()} / {zone.capacity.toLocaleString()}</p>
+            <>
+              {/* ACCESSIBILITY: Exposes the zone layout as a navigable grid of live density cells. */}
+              <div role="grid" aria-label="Live zone density" className="grid w-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {visibleZones.map((zone, index) => (
+                  // ACCESSIBILITY: Identifies each focusable zone card as a grid cell within the live density grid.
+                  <button
+                    key={zone.zoneId}
+                    ref={(element) => {
+                      zoneButtonRefs.current[index] = element;
+                    }}
+                    type="button"
+                    onClick={() => navigate('/heatmap')}
+                    onKeyDown={(event) => handleZoneGridKeyDown(index, event)}
+                    role="gridcell"
+                    aria-label={`${zone.name}, ${zone.densityLevel} density, ${zone.rawCount.toLocaleString()} of ${zone.capacity.toLocaleString()} occupants. Open full zone detail.`}
+                    className={`rounded-2xl border p-4 text-left transition-all duration-150 ease-ops hover:-translate-y-0.5 hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      zone.densityLevel === 'CRITICAL'
+                        ? 'animate-pulse border-red-500/30 bg-red-500/12 shadow-critical'
+                        : zone.densityLevel === 'HIGH'
+                          ? 'border-orange-500/20 bg-orange-500/10'
+                          : zone.densityLevel === 'MEDIUM'
+                            ? 'border-amber-500/20 bg-amber-500/10'
+                            : 'border-green-500/20 bg-green-500/10'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-50">{zone.name}</p>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {zone.rawCount.toLocaleString()} / {zone.capacity.toLocaleString()}
+                        </p>
+                      </div>
+                      <DensityBadge level={zone.densityLevel} compact />
                     </div>
-                    <DensityBadge level={zone.densityLevel} compact />
-                  </div>
-                  <p className="mt-4 text-sm text-slate-400">Tap for full zone detail</p>
-                </div>
-              ))}
-            </button>
+                    <p className="mt-4 text-sm text-slate-400">Tap for full zone detail</p>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
-        </div>
+        </section>
 
-        <div className="rounded-2xl border border-navy-border bg-navy-card p-5 shadow-panel xl:col-span-2">
+        <section aria-labelledby="active-alerts-heading" className="rounded-2xl border border-navy-border bg-navy-card p-5 shadow-panel xl:col-span-2">
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-400">Active Alerts</p>
-              <p className="mt-1 text-lg font-semibold text-slate-50">Unresolved operational alerts</p>
+              <h2 id="active-alerts-heading" className="mt-1 text-lg font-semibold text-slate-50">
+                Unresolved operational alerts
+              </h2>
             </div>
-            <span className="inline-flex min-w-9 items-center justify-center rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-sm font-semibold text-red-300 tabular-nums">
-              {recentAlerts.length}
-            </span>
+            <>
+              {/* ACCESSIBILITY: Announces the active alert count with context. */}
+              <span
+                aria-label={`${recentAlerts.length} active alerts`}
+                className="inline-flex min-w-9 items-center justify-center rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-sm font-semibold text-red-300 tabular-nums"
+              >
+                {recentAlerts.length}
+              </span>
+            </>
           </div>
 
           {loading ? (
@@ -209,8 +264,11 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {recentAlerts.map((alert) => (
+                // ACCESSIBILITY: Promotes P0 alerts as assertive live alerts.
                 <article
                   key={alert.alertId}
+                  role={alert.severityCode === 'P0' ? 'alert' : undefined}
+                  aria-live={alert.severityCode === 'P0' ? 'assertive' : 'polite'}
                   className={`rounded-2xl border-l-4 border border-navy-border bg-navy-elevated p-4 ${
                     alert.severityCode === 'P0' ? 'border-l-red-500' : alert.severityCode === 'P1' ? 'border-l-amber-500' : 'border-l-yellow-500'
                   }`}
@@ -225,13 +283,16 @@ export default function DashboardPage() {
                       </div>
                       <p className="mt-2 line-clamp-2 text-sm text-slate-300">{alert.message}</p>
                     </div>
-                    <button
-                      type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/60 text-slate-200"
-                      aria-label="Resolve alert"
-                    >
-                      <CheckCheck className="h-4 w-4" />
-                    </button>
+                    <>
+                      {/* ACCESSIBILITY: Names the alert resolution action with the alert location context. */}
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/60 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        aria-label={`Resolve alert for ${zoneNameById(alert.zoneId)}`}
+                      >
+                        <CheckCheck className="h-4 w-4" />
+                      </button>
+                    </>
                   </div>
                   <p className="mt-3 text-sm text-slate-500">
                     {formatDistanceToNowStrict(new Date(alert.triggeredAt), { addSuffix: true })}
@@ -240,14 +301,16 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
-        </div>
+        </section>
       </section>
 
-      <section className="rounded-2xl border border-navy-border bg-navy-card p-5 shadow-panel">
+      <section aria-labelledby="queue-status-heading" className="rounded-2xl border border-navy-border bg-navy-card p-5 shadow-panel">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-400">Queue Status</p>
-            <p className="mt-1 text-lg font-semibold text-slate-50">Live F&B and concourse queue strip</p>
+            <h2 id="queue-status-heading" className="mt-1 text-lg font-semibold text-slate-50">
+              Live F&amp;B and concourse queue strip
+            </h2>
           </div>
         </div>
 

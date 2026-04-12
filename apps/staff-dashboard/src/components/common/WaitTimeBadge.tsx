@@ -12,10 +12,25 @@ const getClasses = (minutes: number, isOpen: boolean) => {
 
 export default function WaitTimeBadge({ minutes, isOpen }: WaitTimeBadgeProps) {
   return (
-    <span
+    <>
+      {/* ACCESSIBILITY: Announces queue wait-time updates with a clear text alternative. */}
+      <span
+      aria-label={isOpen ? `${minutes} minute wait time` : 'Queue closed'}
+      aria-live="polite"
       className={`inline-flex min-w-16 items-center justify-center rounded-full border px-2.5 py-1 text-sm font-semibold tabular-nums ${getClasses(minutes, isOpen)}`}
-    >
-      {isOpen ? `${minutes} min` : 'Closed'}
-    </span>
+      >
+        {isOpen ? (
+          <>
+            <span className="sr-only">Current wait time:</span>
+            <span>{minutes} min</span>
+          </>
+        ) : (
+          <>
+            <span className="sr-only">Queue status:</span>
+            <span>Closed</span>
+          </>
+        )}
+      </span>
+    </>
   );
 }

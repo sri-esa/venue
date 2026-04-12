@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "vitest --config vitest.config.mjs --configLoader runner run --pool threads --maxWorkers 1",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview"
   },

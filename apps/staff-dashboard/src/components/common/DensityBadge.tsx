@@ -14,12 +14,18 @@ const classes: Record<DensityLevel, string> = {
 
 export default function DensityBadge({ level, compact = false }: DensityBadgeProps) {
   return (
-    <span
+    <>
+      {/* ACCESSIBILITY: Exposes the current density level to assistive tech and announces updates politely. */}
+      <span
+      aria-label={`${level} density level`}
+      aria-live="polite"
       className={`inline-flex items-center rounded-full border font-medium uppercase tracking-[0.12em] ${
         compact ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1 text-xs'
       } ${classes[level]}`}
-    >
-      {level}
-    </span>
+      >
+        <span className="sr-only">Current density level:</span>
+        <span>{level}</span>
+      </span>
+    </>
   );
 }

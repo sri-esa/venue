@@ -7,7 +7,7 @@
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "lint": "eslint src/ --ext .ts || true",
-    "test": "jest --passWithNoTests"
+    "test": "jest --coverage"
   },
   "dependencies": {
     "@google-cloud/firestore": "^8.3.0",

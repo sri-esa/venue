@@ -5,7 +5,7 @@ module.exports = {
   roots: ['<rootDir>/src'],
   clearMocks: true,
   restoreMocks: true,
-  collectCoverageFrom: ['src/queue_processor.ts'],
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/__tests__/**', '!src/index.ts'],
   coverageThreshold: {
     global: {
       lines: 70,

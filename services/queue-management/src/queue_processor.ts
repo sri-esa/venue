@@ -36,6 +36,15 @@ export interface QueueStatus {
   staleWarning?: boolean;
 }
 
+export interface QueueCandidate extends QueueStatus {
+  distanceMeters: number;
+}
+
+export interface ManualOverride {
+  waitMinutes: number;
+  expiresAt: number;
+}
+
 export class LocalDensityCache {
   private densities: Map<string, DensityLevel> = new Map();
   
@@ -53,6 +62,7 @@ export class LocalDensityCache {
 export class QueueProcessor {
   private pubsub: PubSub;
   public densityCache: LocalDensityCache;
+  private manualOverrides: Map<string, ManualOverride> = new Map();
 
   constructor() {
     this.pubsub = new PubSub({ projectId: process.env.PROJECT_ID || 'smart-venue-dev' });
@@ -85,6 +95,28 @@ export class QueueProcessor {
     await this.detectSurges(event.venueId, status);
   }
 
+  nearestQueue(candidates: QueueCandidate[]): QueueCandidate | null {
+    const openCandidates = candidates.filter((candidate) => candidate.isOpen);
+    if (!openCandidates.length) return null;
+
+    const maxWait = Math.max(...openCandidates.map((candidate) => candidate.estimatedWaitMinutes), 1);
+    const maxDistance = Math.max(...openCandidates.map((candidate) => candidate.distanceMeters), 1);
+
+    return openCandidates.reduce((best, candidate) => {
+      const waitScore = candidate.estimatedWaitMinutes / maxWait;
+      const distanceScore = candidate.distanceMeters / maxDistance;
+      const candidateScore = (waitScore * 0.6) + (distanceScore * 0.4);
+
+      if (!best) return candidate;
+
+      const bestWaitScore = best.estimatedWaitMinutes / maxWait;
+      const bestDistanceScore = best.distanceMeters / maxDistance;
+      const bestScore = (bestWaitScore * 0.6) + (bestDistanceScore * 0.4);
+
+      return candidateScore < bestScore ? candidate : best;
+    }, null as QueueCandidate | null);
+  }
+
   estimateWaitMinutes(
     currentQueueLength: number,
     stallType: StallType,
@@ -96,18 +128,16 @@ export class QueueProcessor {
     else if (stallType === 'MERCHANDISE') baseTimeSec = 120;
     else if (stallType === 'RESTROOM') baseTimeSec = 90;
 
-    let estimateSec = currentQueueLength * baseTimeSec;
+    let waitMins = Math.ceil((currentQueueLength * baseTimeSec) / 60);
 
     // Modifiers
-    if (nearbyZoneDensity === 'CRITICAL') estimateSec *= 1.4;
+    if (nearbyZoneDensity === 'CRITICAL') waitMins = Math.ceil(waitMins * 1.4);
     
     // Check if half time (approx logic for demo: if minutes are between 45-60)
     const minutes = timeOfDay.getMinutes();
     if (minutes >= 45 && minutes < 60) {
-      estimateSec *= 1.6;
+      waitMins = Math.ceil(waitMins * 1.6);
     }
-
-    let waitMins = Math.ceil(estimateSec / 60);
 
     if (currentQueueLength > 20) {
       waitMins += 2; // Flat penalty for operational slowdown
@@ -115,6 +145,32 @@ export class QueueProcessor {
 
     if (currentQueueLength > 0 && waitMins < 1) waitMins = 1;
     return waitMins;
+  }
+
+  isStaleData(lastUpdated: string | number, now: number = Date.now()): boolean {
+    const updatedAt = typeof lastUpdated === 'number' ? lastUpdated : new Date(lastUpdated).getTime();
+    return now - updatedAt > 300000;
+  }
+
+  setManualOverride(queueId: string, waitMinutes: number, now: number = Date.now()): ManualOverride {
+    const override = {
+      waitMinutes,
+      expiresAt: now + 600000,
+    };
+    this.manualOverrides.set(queueId, override);
+    return override;
+  }
+
+  getManualOverride(queueId: string, now: number = Date.now()): ManualOverride | null {
+    const override = this.manualOverrides.get(queueId);
+    if (!override) return null;
+
+    if (now >= override.expiresAt) {
+      this.manualOverrides.delete(queueId);
+      return null;
+    }
+
+    return override;
   }
 
   async detectSurges(venueId: string, status: QueueStatus) {
@@ -149,8 +205,7 @@ export class QueueProcessor {
     for (const doc of snap.docs) {
         const q = doc.data();
         if (q.lastUpdated) {
-            const updatedAt = new Date(q.lastUpdated).getTime();
-            if (now - updatedAt > 300000) { // 5 minutes
+            if (this.isStaleData(q.lastUpdated, now)) {
                 await db.collection('venues').doc(venueId).collection('queues').doc(doc.id).update({
                     isOpen: false,
                     staleWarning: true,

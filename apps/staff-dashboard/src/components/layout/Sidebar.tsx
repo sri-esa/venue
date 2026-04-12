@@ -9,7 +9,8 @@ import {
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { mockAlerts, mockQueues, mockZones } from '../../config/mock-data';
 import { useAlertStore } from '../../store/alert.store';
@@ -43,6 +44,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 function SidebarContent({ systemHealthLabel }: SidebarProps) {
+  const location = useLocation();
   const crowdZones = useCrowdStore(useShallow((state) => Object.values(state.zones)));
   const queues = useQueueStore(useShallow((state) => Object.values(state.queues)));
   const alerts = useAlertStore(useShallow((state) => Object.values(state.alerts)));
@@ -72,13 +74,34 @@ function SidebarContent({ systemHealthLabel }: SidebarProps) {
         <p className="mt-1 text-sm text-slate-400">Stadium operations command</p>
       </div>
 
-      <nav className="flex-1 space-y-1 px-0 py-4">
+      {/* ACCESSIBILITY: Identifies the sidebar links as the app's main navigation landmark. */}
+      <nav
+        role="navigation"
+        aria-label="Main navigation"
+        className="flex-1 space-y-1 px-0 py-4"
+      >
         {items.map(({ to, label, icon: Icon, badge, badgeTone = 'blue' }) => (
-          <NavLink key={to} to={to} className={navLinkClass}>
+          // ACCESSIBILITY: Marks the current page in the navigation set.
+          <NavLink
+            key={to}
+            to={to}
+            className={`${navLinkClass({ isActive: location.pathname === to })} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+            aria-current={location.pathname === to ? 'page' : undefined}
+          >
             <Icon className="h-5 w-5 shrink-0" />
             <span className="flex-1">{label}</span>
             {badge && badge > 0 ? (
-              <span className={`inline-flex min-w-7 items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums ${badgeTones[badgeTone]}`}>
+              // ACCESSIBILITY: Announces the count badge meaning instead of exposing only a number.
+              <span
+                aria-label={
+                  to === '/alerts'
+                    ? `${badge} active alerts`
+                    : to === '/queues'
+                      ? `${badge} long queues`
+                      : `${badge} critical zones`
+                }
+                className={`inline-flex min-w-7 items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums ${badgeTones[badgeTone]}`}
+              >
                 {badge}
               </span>
             ) : null}
@@ -103,16 +126,30 @@ export default function Sidebar({ systemHealthLabel }: SidebarProps) {
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const setSidebarOpen = useUIStore((state) => state.setSidebarOpen);
 
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setSidebarOpen, sidebarOpen]);
+
   return (
     <>
       <aside className="hidden h-screen w-60 shrink-0 border-r border-navy-border lg:fixed lg:inset-y-0 lg:left-0 lg:block">
         <SidebarContent systemHealthLabel={systemHealthLabel} />
       </aside>
 
+      {/* ACCESSIBILITY: Names the mobile navigation trigger for screen readers. */}
       <button
         type="button"
         onClick={() => setSidebarOpen(true)}
-        className="fixed left-4 top-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-navy-border bg-navy-card text-slate-100 shadow-panel lg:hidden"
+        className="fixed left-4 top-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-navy-border bg-navy-card text-slate-100 shadow-panel focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
         aria-label="Open navigation"
       >
         <Menu className="h-5 w-5" />
@@ -120,11 +157,18 @@ export default function Sidebar({ systemHealthLabel }: SidebarProps) {
 
       {sidebarOpen ? (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm lg:hidden">
-          <div className="absolute inset-y-0 left-0 w-60 border-r border-navy-border">
+          {/* ACCESSIBILITY: Marks the mobile sidebar as a modal navigation drawer. */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation"
+            className="absolute inset-y-0 left-0 w-60 border-r border-navy-border"
+          >
+            {/* ACCESSIBILITY: Names the close control for the mobile drawer. */}
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-navy-border bg-navy-card text-slate-100"
+              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-navy-border bg-navy-card text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="Close navigation"
             >
               <X className="h-4 w-4" />
