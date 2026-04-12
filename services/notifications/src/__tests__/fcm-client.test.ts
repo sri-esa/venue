@@ -35,7 +35,7 @@ describe('FCMSender', () => {
       json: jest.fn().mockResolvedValue({ name: 'projects/smart-venue-test/messages/42' }),
     });
 
-    const result = await sender.sendMessage({ token: 'device-token', notification: { title: 'Alert' } });
+    const result = await sender.sendMessage({ token: 'device-token', notification: { title: 'Alert', body: 'Test body' } });
 
     expect(global.fetch).toHaveBeenCalledWith(
       'https://fcm.googleapis.com/v1/projects/smart-venue-test/messages:send',
