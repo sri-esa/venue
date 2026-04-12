@@ -2,81 +2,138 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // ─── Helper functions ──────────────────────────────────────────────────────
+
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isStaff() {
-      return isAuthenticated() && 
-        request.auth.token.role in ['SECURITY', 'OPS', 
-                                    'MEDICAL', 'VENDOR', 
+      return isAuthenticated() &&
+        request.auth.token.role in ['SECURITY', 'OPS',
+                                    'MEDICAL', 'VENDOR',
                                     'MANAGER'];
     }
-    
+
     function isService() {
-      // Cloud Run services use service account tokens
-      return isAuthenticated() && 
+      // Cloud Run services authenticate via service account tokens (ADC)
+      return isAuthenticated() &&
         request.auth.token.service_account == true;
     }
-    
+
     function isVenueStaff(venueId) {
-      return isStaff() && 
+      return isStaff() &&
         request.auth.token.venueId == venueId;
     }
 
-    // VENUES — zones, queues, alerts
+    // SECURITY: Zone write field-allowlist — prevents injection of unexpected fields
+    // and enforces numeric bounds on occupancy at the database layer.
+    function isValidZoneData() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'zoneId', 'venueId', 'occupancy', 'capacity',
+          'densityLevel', 'rawCount', 'lastUpdated',
+          'sensorConfidence', 'connectedZones'
+        ]) &&
+        d.occupancy is number &&
+        d.occupancy >= 0 &&
+        // SECURITY: Cap at 2.0 — values above 2.0 indicate a sensor fault or
+        // spoofed payload and must never be persisted.
+        d.occupancy <= 2.0 &&
+        d.sensorConfidence is number &&
+        d.sensorConfidence >= 0 &&
+        d.sensorConfidence <= 1.0;
+    }
+
+    // SECURITY: Queue write field-allowlist — prevents staff from adding
+    // arbitrary fields via manual-override endpoints.
+    function isValidQueueData() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'queueId', 'stallId', 'stallName', 'stallType',
+          'currentLength', 'estimatedWaitMinutes', 'isOpen',
+          'coordinates', 'lastUpdated', 'staleWarning',
+          'overrideExpiresAt'
+        ]) &&
+        d.currentLength is number &&
+        d.currentLength >= 0 &&
+        d.estimatedWaitMinutes is number &&
+        d.estimatedWaitMinutes >= 0;
+    }
+
+    // SECURITY: Alert write field-allowlist — prevents injection of arbitrary
+    // fields and protects alert integrity for audit purposes.
+    function isValidAlertData() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'alertId', 'venueId', 'zoneId', 'queueId',
+          'type', 'severity', 'message', 'triggeredAt',
+          'resolvedAt', 'assignedTo'
+        ]);
+    }
+
+    // ─── VENUES — zones, queues, alerts ───────────────────────────────────────
+
     match /venues/{venueId} {
       allow read: if isAuthenticated();
       allow write: if isService();
-      
+
+      // CHANGE 7: Zones — field-allowlist + occupancy bounds enforced at DB layer
       match /zones/{zoneId} {
         allow read: if isAuthenticated();
-        // Only backend services write zone density
-        allow write: if isService();
+        // SECURITY: Only backend services write zone density, AND data must pass
+        // field-allowlist validation and numeric range checks.
+        allow write: if isService() && isValidZoneData();
       }
-      
+
       match /queues/{queueId} {
         allow read: if isAuthenticated();
-        // Staff can write for manual overrides
-        allow write: if isService() || isVenueStaff(venueId);
+        // Staff can write for manual overrides; field-allowlist still enforced
+        allow write: if (isService() || isVenueStaff(venueId)) && isValidQueueData();
       }
-      
+
       match /alerts/{alertId} {
         allow read: if isAuthenticated();
-        allow create: if isService();
-        // Staff can update (acknowledge/resolve)
+        // SECURITY: Only services can create alerts, with validated fields
+        allow create: if isService() && isValidAlertData();
+        // Staff can update (acknowledge/resolve); services can also update
         allow update: if isService() || isVenueStaff(venueId);
-        allow delete: if false; // Never delete alerts
+        // CHANGE 7 / SECURITY: Alert deletion is permanently disabled.
+        // Alerts are an immutable audit trail — they must never be deleted.
+        allow delete: if false;
       }
-      
-      match /system_health {
+
+      match /system_health/{doc} {
         allow read: if isAuthenticated();
         allow write: if isService();
       }
     }
 
-    // STAFF
+    // ─── STAFF ────────────────────────────────────────────────────────────────
+
     match /staff/{staffId} {
       allow read: if isAuthenticated() && (
         request.auth.uid == staffId || isStaff()
       );
-      allow write: if isService() || 
+      allow write: if isService() ||
         request.auth.uid == staffId;
     }
 
-    // ANALYTICS
+    // ─── ANALYTICS ────────────────────────────────────────────────────────────
+
     match /analytics/{venueId}/realtime/current {
       allow read: if isAuthenticated();
       allow write: if isService();
     }
 
-    // ATTENDEE PROFILES (personalization)
+    // ─── ATTENDEE PROFILES (personalisation) ──────────────────────────────────
+
+    // SECURITY: DPDP Act compliance — attendees can read, write, and delete
+    // only their own profile. No cross-attendee access is permitted.
     match /attendees/{attendeeId} {
-      // DPDP Act: attendees can delete own data
-      allow read, write: if isAuthenticated() && 
+      allow read, write: if isAuthenticated() &&
         request.auth.uid == attendeeId;
-      allow delete: if isAuthenticated() && 
+      allow delete: if isAuthenticated() &&
         request.auth.uid == attendeeId;
     }
   }
