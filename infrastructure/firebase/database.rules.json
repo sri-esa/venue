@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "venues": {
+      "$venueId": {
+        "queues": {
+          ".indexOn": ["estimatedWaitMinutes"]
+        },
+        "zones": {
+          ".indexOn": ["densityLevel"]
+        },
+        "alerts": {
+          ".indexOn": ["severity", "triggeredAt"]
+        }
+      }
+    }
+  }
+}

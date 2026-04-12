@@ -1,0 +1,29 @@
+@config "../tailwind.config.js";
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-navy-border;
+  }
+
+  html {
+    @apply h-full bg-navy-deep;
+  }
+
+  body {
+    @apply h-full bg-navy-deep font-sans text-sm text-slate-50 antialiased;
+    font-feature-settings: "tnum" 1;
+  }
+
+  #root {
+    @apply min-h-screen bg-navy-deep;
+  }
+
+  button {
+    @apply outline-none;
+  }
+}

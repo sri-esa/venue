@@ -1,0 +1,30 @@
+[
+  {
+    "metric": {
+      "type": "run.googleapis.com/container/instance_count",
+      "labels": {
+        "service_name": "crowd-density-service"
+      }
+    },
+    "points": [
+      {
+        "interval": {
+          "startTime": "2026-04-09T19:00:00Z",
+          "endTime": "2026-04-09T19:00:00Z"
+        },
+        "value": {
+          "int64Value": "2"
+        }
+      },
+      {
+        "interval": {
+          "startTime": "2026-04-09T19:31:00Z",
+          "endTime": "2026-04-09T19:31:00Z"
+        },
+        "value": {
+          "int64Value": "7"
+        }
+      }
+    ]
+  }
+]

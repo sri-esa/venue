@@ -1,0 +1,20 @@
+[
+  {
+    "insertId": "1gabc123xyz",
+    "logName": "projects/prod-venue/logs/run.googleapis.com%2Fstderr",
+    "severity": "WARNING",
+    "textPayload": "AR Renderer Error: connection and request timeout fetching initial zone layout.",
+    "timestamp": "2026-04-09T18:05:11.021Z",
+    "labels": {
+      "location_zone": "gate-1",
+      "connection_state": "initializing"
+    }
+  },
+  {
+    "insertId": "2kdef456uvw",
+    "logName": "projects/prod-venue/logs/run.googleapis.com%2Fstderr",
+    "severity": "ERROR",
+    "textPayload": "timeout exceeded waiting for Firebase config handshake stream at Gate-1.",
+    "timestamp": "2026-04-09T18:07:34.910Z"
+  }
+]

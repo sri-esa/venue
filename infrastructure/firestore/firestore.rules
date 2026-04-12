@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isStaff() {
+      return isAuthenticated() && 
+        request.auth.token.role in ['SECURITY', 'OPS', 
+                                    'MEDICAL', 'VENDOR', 
+                                    'MANAGER'];
+    }
+    
+    function isService() {
+      // Cloud Run services use service account tokens
+      return isAuthenticated() && 
+        request.auth.token.service_account == true;
+    }
+    
+    function isVenueStaff(venueId) {
+      return isStaff() && 
+        request.auth.token.venueId == venueId;
+    }
+
+    // VENUES — zones, queues, alerts
+    match /venues/{venueId} {
+      allow read: if isAuthenticated();
+      allow write: if isService();
+      
+      match /zones/{zoneId} {
+        allow read: if isAuthenticated();
+        // Only backend services write zone density
+        allow write: if isService();
+      }
+      
+      match /queues/{queueId} {
+        allow read: if isAuthenticated();
+        // Staff can write for manual overrides
+        allow write: if isService() || isVenueStaff(venueId);
+      }
+      
+      match /alerts/{alertId} {
+        allow read: if isAuthenticated();
+        allow create: if isService();
+        // Staff can update (acknowledge/resolve)
+        allow update: if isService() || isVenueStaff(venueId);
+        allow delete: if false; // Never delete alerts
+      }
+      
+      match /system_health {
+        allow read: if isAuthenticated();
+        allow write: if isService();
+      }
+    }
+
+    // STAFF
+    match /staff/{staffId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == staffId || isStaff()
+      );
+      allow write: if isService() || 
+        request.auth.uid == staffId;
+    }
+
+    // ANALYTICS
+    match /analytics/{venueId}/realtime/current {
+      allow read: if isAuthenticated();
+      allow write: if isService();
+    }
+
+    // ATTENDEE PROFILES (personalization)
+    match /attendees/{attendeeId} {
+      // DPDP Act: attendees can delete own data
+      allow read, write: if isAuthenticated() && 
+        request.auth.uid == attendeeId;
+      allow delete: if isAuthenticated() && 
+        request.auth.uid == attendeeId;
+    }
+  }
+}

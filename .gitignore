@@ -1,0 +1,269 @@
+### SECTION 1 — ENVIRONMENT & SECRETS
+# ⚠️ NEVER remove entries from this section.
+# If you think you need to commit a secret, you are wrong.
+# Use Google Secret Manager instead.
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*.local
+!/.env.example
+
+*-key.json
+*-credentials.json
+*-service-account.json
+google-services.json
+GoogleService-Info.plist
+# GCP service account and ADC files
+service-account*.json
+application_default_credentials.json
+gcloud-service-key.json
+
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+*secret*
+*credential*
+*private-key*
+credentials/
+!credentials/*.placeholder.json
+
+
+### SECTION 2 — FLUTTER / DART (apps/attendee-app/)
+build/
+.dart_tool/
+*.g.dart
+*.freezed.dart
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+android/.gradle/
+android/local.properties
+macos/Pods/
+.flutter-plugins
+.flutter-plugins-dependencies
+coverage/
+*.cpuprofile
+# pubspec.lock IS committed for apps (reproducible builds)
+!pubspec.lock
+
+
+### SECTION 3 — NODE.JS / TYPESCRIPT
+node_modules/
+dist/
+.tsbuildinfo
+*.tsbuildinfo
+.npm/
+.yarn/
+.pnpm-store/
+# package-lock.json IS committed (reproducible builds)
+!package-lock.json
+lcov.info
+.nyc_output/
+.jest-cache/
+.vitest/
+k6-results*.json
+artillery-report*.json
+artillery-report*.html
+*.cpuprofile
+
+
+### SECTION 4 — PYTHON (iot/simulator/)
+# (Note: .env/ conflicts with env vars. Included specific trailing slash to target dirs explicitly)
+venv/
+.venv/
+env/
+.env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+iot/simulator/logs/*.log
+iot/simulator/*.prof
+
+
+### SECTION 5 — FIREBASE & GCP EMULATORS
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+.runtimeconfig.json
+.cache/
+firestore-debug.log
+database-debug.log
+functions/lib/
+firebase-adminsdk*.json
+.firebaserc.local
+# Removed: firebase.json and .firebaserc (deleted in GCP migration)
+
+
+### SECTION 6 — GOOGLE CLOUD & TERRAFORM
+.terraform.lock.hcl
+# .terraform.lock.hcl should be committed
+# Remove this line after first terraform init
+*.tfstate.*
+*.tfvars
+# *.tfvars.example SHOULD be committed
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.gcloud/
+gcloud-service-key.json
+application_default_credentials.json
+
+
+### SECTION 7 — DOCKER
+docker-compose.override.yml
+docker-compose.local.yml
+.docker/
+*.pid
+
+
+### SECTION 8 — TESTING & SIMULATION ARTIFACTS
+tests/simulation/logs/
+tests/performance/results/raw/
+docs/integration/test_run_*.md
+# Individual test run logs are ephemeral
+# Keep only: step10_complete.md and signoff docs
+*.html
+k6_*.json
+junit.xml
+test-results.xml
+
+
+### SECTION 9 — OPERATING SYSTEM
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+
+### SECTION 10 — IDEs & EDITORS
+.vscode/
+# Keep: .vscode/extensions.json (recommended extensions)
+!/.vscode/extensions.json
+# Keep: .vscode/settings.json (project-wide formatting rules)
+!/.vscode/settings.json
+# Ignore: .vscode/*.code-workspace (personal workspace files)
+.vscode/*.code-workspace
+
+.idea/
+# Keep run configurations for team consistency
+!/.idea/runConfigurations/
+*.iml
+*.iws
+*.ipr
+out/
+
+.antigravity/cache/
+.antigravity/tmp/
+# Keep: .antigravity/config (project agent settings)
+!/.antigravity/config
+
+*.swp
+*.swo
+\#*\#
+.#*
+
+
+### SECTION 11 — BUILD & DEPLOYMENT ARTIFACTS
+apps/attendee-app/build/
+apps/staff-dashboard/dist/
+services/*/dist/
+*.tar
+.cloudrun/
+# Docker image layer cache
+.docker-layers/
+# Cloud Run deploy logs
+deploy-*.log
+
+
+### SECTION 12 — DOCUMENTATION ARTIFACTS
+docs/optimization/profiles/*.txt
+docs/optimization/profiles/*.cpuprofile
+docs/simulation/logs/
+docs/api/generated/
+# Auto-generated post-event pipeline outputs (ephemeral, per-event)
+docs/retrospective/event_*_report.json
+docs/retrospective/event_*_metrics.json
+docs/retrospective/event_*_delta.json
+docs/retrospective/event_*_recommendations.json
+docs/retrospective/event_*_costs.json
+docs/retrospective/event_*_auto_report.md
+# The following paths MUST be committed as source of truth manifests:
+!/docs/attendee-app/
+!/docs/crowd-module/
+!/docs/deployment/
+!/docs/integration/
+!/docs/iteration/
+!/docs/knowledge_base/
+!/docs/optimization/
+!/docs/personalization/
+!/docs/retrospective/
+!/docs/setup/
+!/docs/simulation/
+!/docs/staff-dashboard/
+!/docs/venue_ops/
+!/docs/phase1_*.md
+!/docs/phase2_*.md
+!/docs/phase5_*.md
+!/docs/system_complete.md
+# GCP migration docs — committed as source of truth
+!/docs/migration/
+
+
+### SECTION 13 — MISCELLANEOUS
+*.tmp
+*.temp
+*.bak
+*.orig
+.lock
+# Note: package-lock.json and pubspec.lock
+# ARE committed. Only generic .lock files ignored.
+*.pem
+*.p12
+*.pfx
+*.crt
+*.key
+*.jks
+# SSL certs and Android keystores belong in Secret Manager, not git
+*.zip
+*.tar.gz
+*.rar
+# Debug logs
+**/debug/runtime_session_*.txt
+
+# Screenshot artifacts
+**/smoke-*.png
+**/preview-*.png
+
+# Lock files
+package-lock.json
+**/debug/runtime_session_*.txt
+**/smoke-*.png
+**/preview-*.png
+package-lock.json
+node_modules/
+dist/
+build/
+.dart_tool/

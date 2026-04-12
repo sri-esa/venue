@@ -1,0 +1,6 @@
+{
+  "queueAlgorithmBaselineMs": 215,
+  "queueAlgorithmSlaMs": 500,
+  "arUsageRate": 0.64,
+  "cacheHitRateTarget": 0.81
+}

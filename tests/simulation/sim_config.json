@@ -1,0 +1,16 @@
+{
+  "venueId": "venue-001",
+  "eventId": "event-001",
+  "simulatorSpeed": 10,
+  "chaosModeEnabled": true,
+  "chaosSeed": 42,
+  "pubsubEndpoint": "localhost:8085",
+  "firebaseEmulatorHost": "localhost",
+  "crowdDensityServiceUrl": "http://localhost:8081",
+  "queueServiceUrl": "http://localhost:8082",
+  "notificationsServiceUrl": "http://localhost:8083",
+  "analyticsServiceUrl": "http://localhost:8084",
+  "alertLatencyThresholdMs": 30000,
+  "queueUpdateThresholdMs": 500,
+  "degradationDetectionMs": 30000
+}
